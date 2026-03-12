@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>HAND AUF – Snack Catcher</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #00423d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      font-family: 'Arial Black', Arial, sans-serif;
+      color: #fff;
+      touch-action: none;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 9 / 16;
+      max-height: 95vh;
+      max-height: 95dvh;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+    }
+
+    /* ── OVERLAYS ── */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 66, 61, 0.93);
+      border-radius: 12px;
+      z-index: 10;
+      gap: 16px;
+      padding: 30px;
+      text-align: center;
+      transition: opacity 0.3s;
+    }
+
+    .overlay.hidden { display: none; }
+
+    h1 { font-size: 2.4em; letter-spacing: 3px; text-transform: uppercase; }
+    h2 { font-size: 1.6em; letter-spacing: 1px; }
+
+    .subtitle {
+      font-size: 1em;
+      font-weight: normal;
+      opacity: 0.8;
+      max-width: 300px;
+      line-height: 1.4;
+    }
+
+    .btn {
+      background: #fff;
+      color: #00423d;
+      border: none;
+      padding: 16px 40px;
+      font-size: 1.2em;
+      font-family: 'Arial Black', Arial, sans-serif;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:hover { transform: scale(1.05); }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-secondary {
+      background: transparent;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.4);
+      padding: 10px 24px;
+      font-size: 0.9em;
+    }
+
+    /* ── HUD ── */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 5;
+      pointer-events: none;
+      padding: 10px 14px;
+    }
+
+    #hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    #lives-display { font-size: 1.2em; text-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+    #level-display {
+      font-size: 0.75em;
+      opacity: 0.7;
+      text-align: center;
+      flex: 1;
+      padding-top: 4px;
+    }
+    #score-display {
+      font-size: 1.6em;
+      font-weight: bold;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      text-align: right;
+    }
+    #combo-display {
+      font-size: 0.85em;
+      color: #fdd835;
+      text-align: right;
+      min-height: 1.2em;
+    }
+
+    /* Progress bar */
+    #progress-wrap {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      z-index: 5;
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #fdd835;
+      transition: width 0.3s;
+      border-radius: 0 0 12px 12px;
+    }
+
+    /* ── MOBILE CONTROLS ── */
+    #mobile-controls {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 0; right: 0;
+      z-index: 5;
+      justify-content: space-between;
+      padding: 0 14px;
+      pointer-events: none;
+    }
+
+    .arrow-btn {
+      pointer-events: auto;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.7);
+      font-size: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .arrow-btn:active { background: rgba(255,255,255,0.25); }
+
+    @media (pointer: coarse) {
+      #mobile-controls { display: flex; }
+    }
+
+    /* ── GAME OVER ── */
+    #final-score { font-size: 3.5em; font-weight: bold; }
+    #highscore-badge {
+      background: #fdd835;
+      color: #00423d;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .product-quip {
+      font-size: 0.85em;
+      opacity: 0.7;
+      font-style: italic;
+      max-width: 260px;
+    }
+
+    /* ── LEVEL UP ── */
+    #level-up-screen .level-name {
+      font-size: 1.8em;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    #level-up-screen .unlock-text {
+      color: #fdd835;
+      font-size: 0.95em;
+    }
+
+    /* ── CHALLENGE BANNER ── */
+    #challenge-banner {
+      background: rgba(253, 216, 53, 0.15);
+      border: 1px solid rgba(253, 216, 53, 0.4);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.85em;
+      color: #fdd835;
+      max-width: 280px;
+    }
+
+    .controls-hint { font-size: 0.8em; opacity: 0.5; }
+
+    .gap-sm { height: 6px; }
+  </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hud-top">
+      <div id="lives-display"></div>
+      <div id="level-display"></div>
+      <div>
+        <div id="score-display">0</div>
+        <div id="combo-display"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+
+  <!-- Mobile Controls -->
+  <div id="mobile-controls">
+    <div class="arrow-btn" id="btn-left">◀</div>
+    <div class="arrow-btn" id="btn-right">▶</div>
+  </div>
+
+  <!-- Start Screen -->
+  <div class="overlay" id="start-screen">
+    <h1>HAND AUF</h1>
+    <p class="subtitle">Hilf dem Erdmännchen, die Snacks aufzufangen!</p>
+    <div id="challenge-banner" class="hidden"></div>
+    <button class="btn" id="start-btn">Snacken!</button>
+    <p class="controls-hint">← → Pfeiltasten oder Touch</p>
+    <div class="gap-sm"></div>
+    <div id="start-highscore" style="font-size:0.85em; opacity:0.6;"></div>
+  </div>
+
+  <!-- Level Up Screen -->
+  <div class="overlay hidden" id="level-up-screen">
+    <h2 id="level-up-title"></h2>
+    <div class="level-name" id="level-up-name"></div>
+    <div class="unlock-text" id="level-up-unlock"></div>
+    <p class="subtitle" id="level-up-fact"></p>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="overlay hidden" id="game-over-screen">
+    <h2>Game Over</h2>
+    <div id="final-score">0</div>
+    <p class="subtitle">Snacks gefangen</p>
+    <div id="highscore-badge" class="hidden">Neuer Rekord!</div>
+    <p class="product-quip" id="product-quip"></p>
+    <button class="btn" id="restart-btn">Nochmal!</button>
+    <button class="btn btn-secondary" id="share-btn">Score teilen</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ══════════════════════════════════════════
+  // CONFIGURATION
+  // ══════════════════════════════════════════
+
+  const LEVELS = [
+    {
+      level: 1, name: 'Probiersnack', snacksNeeded: 0,
+      fallSpeed: 1.4, spawnInterval: 65, maxActive: 4,
+      snackTypes: [0, 1, 2],
+      bg: ['#005a52', '#00423d'],
+      fact: 'Steuere die Hand und fang die Snacks!',
+    },
+    {
+      level: 2, name: 'Snack-Anfänger', snacksNeeded: 12,
+      fallSpeed: 1.7, spawnInterval: 55, maxActive: 5,
+      snackTypes: [0, 1, 2, 3],
+      unlock: 'Mandel',
+      bg: ['#005a52', '#003d38'],
+      fact: 'Rauchmandeln werden über Buchenholz geräuchert.',
+    },
+    {
+      level: 3, name: 'Seemannsfutter', snacksNeeded: 30,
+      fallSpeed: 2.0, spawnInterval: 48, maxActive: 6,
+      snackTypes: [0, 1, 2, 3, 4],
+      unlock: 'Kürbiskern',
+      bg: ['#1a5276', '#0e3d5c'],
+      fact: 'Seemannsfutter: Edamame, Mais, Dinkelkugeln, Rauchmandeln & Bio-Rindfleisch.',
+    },
+    {
+      level: 4, name: 'Bergsteigermampf', snacksNeeded: 55,
+      fallSpeed: 2.3, spawnInterval: 42, maxActive: 7,
+      snackTypes: [0, 1, 2, 3, 4, 5],
+      unlock: 'Pistazie',
+      bg: ['#2e5339', '#1a3d25'],
+      fact: 'Bergsteigermampf: Erbsen, Brezeln, Kürbiskerne, Pistazien & Gouda.',
+      hasBomb: true,
+    },
+    {
+      level: 5, name: 'Snack-Meister', snacksNeeded: 85,
+      fallSpeed: 2.7, spawnInterval: 36, maxActive: 8,
+      snackTypes: [0, 1, 2, 3, 4, 5, 6, 7],
+      unlock: 'Käse & Rindfleisch',
+      bg: ['#5c3d1e', '#3d2810'],
+      fact: 'Du bist ein echter Snack-Profi!',
+      hasBomb: true,
+    },
+    {
+      level: 6, name: 'HAND AUF Legende', snacksNeeded: 120,
+      fallSpeed: 3.1, spawnInterval: 30, maxActive: 10,
+      snackTypes: [0, 1, 2, 3, 4, 5, 6, 7],
+      bg: ['#4a1942', '#2d1028'],
+      fact: 'Legenden-Status! Nur die Besten schaffen es hierher.',
+      hasBomb: true, endless: true,
+    },
+  ];
+
+  const SNACK_DEFS = [
+    { name: 'Edamame',     img: 'snacks/edamame.png',     color: '#7cb342', points: 1 },
+    { name: 'Mais',        img: 'snacks/mais.png',        color: '#fdd835', points: 1 },
+    { name: 'Brezel',      img: 'snacks/brezel.png',      color: '#c8a25c', points: 1 },
+    { name: 'Mandel',      img: 'snacks/mandel.png',      color: '#a1723a', points: 1 },
+    { name: 'Kürbiskern',  img: 'snacks/kuerbiskern.png', color: '#e8a735', points: 2 },
+    { name: 'Pistazie',    img: 'snacks/pistazie.png',    color: '#8bc34a', points: 2 },
+    { name: 'Käse',        img: 'snacks/kaese.png',       color: '#ffca28', points: 2 },
+    { name: 'Rindfleisch', img: 'snacks/rindfleisch.png', color: '#7a3b2e', points: 2 },
+  ];
+
+  const BOMB_DEF = { name: 'Chili', emoji: '🌶️', color: '#e53935', points: -1 };
+  const GOLD_DEF = { name: 'Gold-Snack', emoji: '⭐', color: '#ffd700', points: 5 };
+
+  // Preload snack images
+  const snackImages = {};
+  for (const def of SNACK_DEFS) {
+    const img = new Image();
+    img.src = def.img;
+    snackImages[def.img] = img;
+  }
+
+  const PRODUCT_QUIPS = [
+    { min: 0,   text: 'Nächstes Mal wird\'s besser!' },
+    { min: 10,  text: 'Genug für eine Handvoll Snacks!' },
+    { min: 30,  text: 'Das reicht für eine halbe Packung Seemannsfutter!' },
+    { min: 60,  text: 'Eine ganze Packung Bergsteigermampf verdient!' },
+    { min: 100, text: 'HAND AUF Vorrat für eine Woche gesichert!' },
+  ];
+
+  // ══════════════════════════════════════════
+  // CANVAS SETUP
+  // ══════════════════════════════════════════
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  let W, H, gW, gH;
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    W = canvas.width; H = canvas.height;
+    gW = rect.width; gH = rect.height;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ══════════════════════════════════════════
+  // AUDIO (Web Audio API – synthesized)
+  // ══════════════════════════════════════════
+
+  let audioCtx = null;
+  let soundOn = true;
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) { soundOn = false; }
+  }
+
+  function playTone(freq, dur, type = 'sine', vol = 0.15) {
+    if (!soundOn || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function sfxCatch(combo) {
+    playTone(500 + combo * 60, 0.12, 'sine', 0.12);
+  }
+  function sfxMiss() {
+    playTone(180, 0.2, 'triangle', 0.1);
+  }
+  function sfxBomb() {
+    playTone(100, 0.3, 'sawtooth', 0.08);
+  }
+  function sfxLevelUp() {
+    playTone(523, 0.15); setTimeout(() => playTone(659, 0.15), 120);
+    setTimeout(() => playTone(784, 0.25, 'sine', 0.18), 240);
+  }
+  function sfxGold() {
+    playTone(800, 0.1); setTimeout(() => playTone(1000, 0.1), 80);
+    setTimeout(() => playTone(1200, 0.2), 160);
+  }
+
+  // ══════════════════════════════════════════
+  // PERSISTENCE
+  // ══════════════════════════════════════════
+
+  const STORE_KEY = 'handauf_snackcatcher';
+  let saveData = { highScore: 0, gamesPlayed: 0 };
+
+  function loadSave() {
+    try {
+      const d = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (d) Object.assign(saveData, d);
+    } catch (e) {}
+  }
+  function writeSave() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(saveData)); } catch (e) {}
+  }
+  loadSave();
+
+  // Challenge via URL
+  let challengeScore = 0;
+  try {
+    const p = new URLSearchParams(location.search);
+    challengeScore = parseInt(p.get('challenge')) || 0;
+  } catch (e) {}
+
+  // ══════════════════════════════════════════
+  // DOM REFS
+  // ══════════════════════════════════════════
+
+  const $scoreDisplay = document.getElementById('score-display');
+  const $livesDisplay = document.getElementById('lives-display');
+  const $levelDisplay = document.getElementById('level-display');
+  const $comboDisplay = document.getElementById('combo-display');
+  const $progressBar = document.getElementById('progress-bar');
+  const $startScreen = document.getElementById('start-screen');
+  const $startHighscore = document.getElementById('start-highscore');
+  const $challengeBanner = document.getElementById('challenge-banner');
+  const $levelUpScreen = document.getElementById('level-up-screen');
+  const $gameOverScreen = document.getElementById('game-over-screen');
+  const $finalScore = document.getElementById('final-score');
+  const $highscoreBadge = document.getElementById('highscore-badge');
+  const $productQuip = document.getElementById('product-quip');
+  const $shareBtn = document.getElementById('share-btn');
+
+  // Show highscore on start
+  if (saveData.highScore > 0) {
+    $startHighscore.textContent = `Rekord: ${saveData.highScore}`;
+  }
+  if (challengeScore > 0) {
+    $challengeBanner.textContent = `Dein Freund hat ${challengeScore} Snacks gefangen. Schaffst du mehr?`;
+    $challengeBanner.classList.remove('hidden');
+  }
+
+  // ══════════════════════════════════════════
+  // GAME STATE
+  // ══════════════════════════════════════════
+
+  const STATE = { MENU: 0, PLAYING: 1, LEVEL_UP: 2, GAME_OVER: 3 };
+  let gameState = STATE.MENU;
+  let lastTime = 0;
+
+  let hand = { x: 0, y: 0, w: 0, h: 0, speed: 0 };
+  let meerkat = { state: 'idle', timer: 0, bobPhase: 0, mode: 'menu' };
+  let fallingItems = [];
+  let particles = [];
+  let scorePopups = [];
+  let score = 0;
+  let lives = 3;
+  let currentLevel = 0;
+  let snacksCaughtInLevel = 0;
+  let totalSnacksCaught = 0;
+  let combo = { count: 0, timer: 0 };
+  let screenShake = { x: 0, y: 0, timer: 0 };
+  let levelUpTimer = 0;
+  let spawnAccum = 0;
+  let bgColors = ['#005a52', '#00423d'];
+  let keys = { left: false, right: false };
+
+  function getLevelDef() { return LEVELS[Math.min(currentLevel, LEVELS.length - 1)]; }
+
+  function initGame() {
+    hand.w = gW * 0.35;
+    hand.h = hand.w * (344 / 1301); // match hand.png aspect ratio
+    hand.x = gW / 2 - hand.w / 2;
+    hand.y = gH - hand.h - 30;
+    hand.speed = gW * 0.5; // px per second
+    meerkat = { state: 'idle', timer: 0, bobPhase: 0, mode: 'game' };
+    fallingItems = [];
+    particles = [];
+    scorePopups = [];
+    score = 0;
+    lives = 3;
+    currentLevel = 0;
+    snacksCaughtInLevel = 0;
+    totalSnacksCaught = 0;
+    combo = { count: 0, timer: 0 };
+    screenShake = { x: 0, y: 0, timer: 0 };
+    spawnAccum = 0;
+    bgColors = LEVELS[0].bg;
+    updateHUD();
+  }
+
+  function updateHUD() {
+    $scoreDisplay.textContent = score;
+    $livesDisplay.textContent = '❤️'.repeat(Math.max(0, lives));
+    const ld = getLevelDef();
+    $levelDisplay.textContent = `Level ${ld.level} – ${ld.name}`;
+
+    // Combo
+    if (combo.count >= 2) {
+      $comboDisplay.textContent = `x${combo.count} Combo!`;
+      $comboDisplay.style.fontSize = `${Math.min(0.85 + combo.count * 0.08, 1.5)}em`;
+    } else {
+      $comboDisplay.textContent = '';
+    }
+
+    // Progress bar
+    const nextLevel = LEVELS[Math.min(currentLevel + 1, LEVELS.length - 1)];
+    const prevNeeded = getLevelDef().snacksNeeded;
+    const nextNeeded = nextLevel.snacksNeeded;
+    if (nextNeeded > prevNeeded) {
+      const pct = Math.min(100, ((totalSnacksCaught - prevNeeded) / (nextNeeded - prevNeeded)) * 100);
+      $progressBar.style.width = pct + '%';
+      if (pct > 80) $progressBar.style.background = '#ffab00';
+      else $progressBar.style.background = '#fdd835';
+    } else {
+      $progressBar.style.width = '100%';
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // MEERKAT IMAGES
+  // ══════════════════════════════════════════
+
+  const mkImages = {};
+  let mkImagesLoaded = 0;
+  const MK_TOTAL = 4;
+  const mkSrc = {
+    idle: 'meerkat-idle.png',
+    catch: 'meerkat-happy.png',
+    miss: 'meerkat-shocked.png',
+    start: 'meerkat-start.png',
+  };
+
+  for (const [key, src] of Object.entries(mkSrc)) {
+    const img = new Image();
+    img.onload = () => { mkImagesLoaded++; };
+    img.src = src;
+    mkImages[key] = img;
+  }
+
+  function drawMeerkat(cx, baseY, height, state, bobPhase) {
+    const img = mkImages[state] || mkImages.idle;
+    if (!img || !img.naturalWidth) return;
+
+    ctx.save();
+
+    // Bob animation
+    const bob = Math.sin(bobPhase) * 2;
+    const aspect = img.naturalWidth / img.naturalHeight;
+    const h = height;
+    const w = h * aspect;
+
+    ctx.drawImage(img, cx - w / 2, baseY - h + bob, w, h);
+    ctx.restore();
+  }
+
+  // ══════════════════════════════════════════
+  // DRAWING: HAND (image-based)
+  // ══════════════════════════════════════════
+
+  const handImg = new Image();
+  handImg.src = 'hand.png';
+
+  function drawHand(x, y, w, h) {
+    if (!handImg.naturalWidth) return;
+    ctx.drawImage(handImg, x, y, w, h);
+  }
+
+  // ══════════════════════════════════════════
+  // DRAWING: SNACKS
+  // ══════════════════════════════════════════
+
+  function drawItem(item) {
+    ctx.save();
+    ctx.translate(item.x + item.size / 2, item.y + item.size / 2);
+    ctx.rotate(item.rot);
+
+    // Glow for gold/bomb
+    if (item.isGold) {
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 12;
+    } else if (item.isBomb) {
+      ctx.shadowColor = '#e53935';
+      ctx.shadowBlur = 8;
+    }
+
+    // Background circle only for special items (bomb/gold)
+    if (item.isGold || item.isBomb) {
+      ctx.fillStyle = item.def.color;
+      ctx.globalAlpha = item.isGold ? 0.4 : 0.35;
+      ctx.beginPath();
+      ctx.arc(0, 0, item.size / 2 + 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    // Draw snack image or emoji fallback
+    const snackImg = item.def.img ? snackImages[item.def.img] : null;
+    if (snackImg && snackImg.naturalWidth) {
+      const s = item.size;
+      ctx.drawImage(snackImg, -s / 2, -s / 2, s, s);
+    } else {
+      // Fallback for bomb/gold (still emoji)
+      ctx.font = `${item.size}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.def.emoji || '?', 0, 2);
+    }
+
+    ctx.restore();
+  }
+
+  // ══════════════════════════════════════════
+  // PARTICLES & POPUPS
+  // ══════════════════════════════════════════
+
+  function spawnParticles(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 5,
+        vy: -Math.random() * 4 - 1,
+        life: 1,
+        color,
+        size: Math.random() * 4 + 2,
+      });
+    }
+  }
+
+  function spawnScorePopup(x, y, text, color = '#fff') {
+    scorePopups.push({ x, y, text, color, life: 1 });
+  }
+
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt * 60;
+      p.y += p.vy * dt * 60;
+      p.vy += 6 * dt;
+      p.life -= 1.8 * dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = scorePopups.length - 1; i >= 0; i--) {
+      const p = scorePopups[i];
+      p.y -= 40 * dt;
+      p.life -= 1.5 * dt;
+      if (p.life <= 0) scorePopups.splice(i, 1);
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.font = 'bold 16px Arial Black';
+    ctx.textAlign = 'center';
+    for (const p of scorePopups) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ══════════════════════════════════════════
+  // SPAWNING
+  // ══════════════════════════════════════════
+
+  function spawnItem() {
+    const ld = getLevelDef();
+    if (fallingItems.length >= ld.maxActive) return;
+
+    const size = 40 + Math.random() * 10;
+    let def, isGold = false, isBomb = false;
+
+    // 5% chance gold snack from level 3+
+    if (currentLevel >= 2 && Math.random() < 0.05) {
+      def = GOLD_DEF;
+      isGold = true;
+    }
+    // 8% chance bomb from levels with hasBomb
+    else if (ld.hasBomb && Math.random() < 0.08) {
+      def = BOMB_DEF;
+      isBomb = true;
+    }
+    // Normal snack from available types
+    else {
+      const typeIdx = ld.snackTypes[Math.floor(Math.random() * ld.snackTypes.length)];
+      def = SNACK_DEFS[typeIdx];
+    }
+
+    // Avoid spawning too close to existing items near top
+    let x, attempts = 0;
+    do {
+      x = Math.random() * (gW - size - 20) + 10;
+      attempts++;
+    } while (attempts < 8 && fallingItems.some(
+      it => Math.abs(it.x - x) < 40 && it.y < 60
+    ));
+
+    fallingItems.push({
+      x, y: -size - 10,
+      size,
+      speed: ld.fallSpeed + Math.random() * 0.6,
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.03,
+      def, isGold, isBomb,
+      grace: 0,
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // GAME UPDATE
+  // ══════════════════════════════════════════
+
+  function updateGame(dt) {
+    const ld = getLevelDef();
+
+    // ── Move hand ──
+    if (keys.left) hand.x -= hand.speed * dt;
+    if (keys.right) hand.x += hand.speed * dt;
+    hand.x = Math.max(0, Math.min(gW - hand.w, hand.x));
+
+    // ── Meerkat state timer ──
+    if (meerkat.timer > 0) {
+      meerkat.timer -= dt;
+      if (meerkat.timer <= 0) meerkat.state = 'idle';
+    }
+    meerkat.bobPhase += dt * 3;
+
+    // ── Spawning ──
+    spawnAccum += dt * 60;
+    if (spawnAccum >= ld.spawnInterval) {
+      spawnItem();
+      spawnAccum = 0;
+    }
+
+    // ── Combo timer ──
+    if (combo.timer > 0) {
+      combo.timer -= dt;
+      if (combo.timer <= 0) { combo.count = 0; updateHUD(); }
+    }
+
+    // ── Screen shake ──
+    if (screenShake.timer > 0) {
+      screenShake.timer -= dt;
+      screenShake.x = (Math.random() - 0.5) * 6;
+      screenShake.y = (Math.random() - 0.5) * 6;
+      if (screenShake.timer <= 0) { screenShake.x = 0; screenShake.y = 0; }
+    }
+
+    // ── Update items ──
+    const handCX = hand.x + hand.w / 2;
+    const handTop = hand.y;
+    const catchW = hand.w * 0.65; // catch zone width (generous)
+
+    for (let i = fallingItems.length - 1; i >= 0; i--) {
+      const it = fallingItems[i];
+      it.y += it.speed * dt * 60;
+      it.rot += it.rotSpeed;
+
+      const ix = it.x + it.size / 2;
+      const iy = it.y + it.size / 2;
+
+      // Catch check (generous hitbox)
+      if (
+        ix > handCX - catchW &&
+        ix < handCX + catchW &&
+        iy > handTop - 10 &&
+        iy < handTop + hand.h * 0.6
+      ) {
+        fallingItems.splice(i, 1);
+
+        if (it.isBomb) {
+          // Caught a bomb!
+          lives--;
+          combo.count = 0;
+          combo.timer = 0;
+          meerkat.state = 'miss';
+          meerkat.timer = 0.6;
+          screenShake.timer = 0.25;
+          spawnParticles(ix, iy, '#e53935', 12);
+          spawnScorePopup(ix, iy - 10, '💥', '#e53935');
+          sfxBomb();
+          updateHUD();
+          if (lives <= 0) { endGame(); return; }
+        } else {
+          // Caught a snack!
+          const pts = it.def.points;
+          combo.count++;
+          combo.timer = 1.5;
+          const multiplier = Math.min(1 + (combo.count - 1) * 0.3, 4);
+          const earnedPts = Math.round(pts * multiplier);
+          score += earnedPts;
+          totalSnacksCaught++;
+          snacksCaughtInLevel++;
+
+          meerkat.state = 'catch';
+          meerkat.timer = 0.35;
+
+          const popText = earnedPts > 1 ? `+${earnedPts}` : '+1';
+          const popColor = it.isGold ? '#ffd700' : '#fff';
+          spawnParticles(ix, iy, it.def.color, it.isGold ? 14 : 8);
+          spawnScorePopup(ix, iy - 10, popText, popColor);
+
+          if (it.isGold) sfxGold();
+          else sfxCatch(combo.count);
+
+          updateHUD();
+          checkLevelUp();
+        }
+        continue;
+      }
+
+      // Missed (with grace period)
+      if (it.y > gH + 5) {
+        it.grace += dt;
+        if (it.grace > 0.1) {
+          fallingItems.splice(i, 1);
+          if (!it.isBomb) { // Missing a bomb is fine!
+            lives--;
+            meerkat.state = 'miss';
+            meerkat.timer = 0.5;
+            screenShake.timer = 0.15;
+            sfxMiss();
+            updateHUD();
+            if (lives <= 0) { endGame(); return; }
+          }
+        }
+      }
+    }
+
+    updateParticles(dt);
+  }
+
+  // ══════════════════════════════════════════
+  // LEVEL UP CHECK
+  // ══════════════════════════════════════════
+
+  function checkLevelUp() {
+    const nextIdx = currentLevel + 1;
+    if (nextIdx >= LEVELS.length) return;
+    if (totalSnacksCaught >= LEVELS[nextIdx].snacksNeeded) {
+      currentLevel = nextIdx;
+      snacksCaughtInLevel = 0;
+      const ld = LEVELS[currentLevel];
+      bgColors = ld.bg;
+      sfxLevelUp();
+      showLevelUp(ld);
+    }
+  }
+
+  function showLevelUp(ld) {
+    gameState = STATE.LEVEL_UP;
+    levelUpTimer = 2.5;
+
+    document.getElementById('level-up-title').textContent = `Level ${ld.level}`;
+    document.getElementById('level-up-name').textContent = ld.name;
+    document.getElementById('level-up-unlock').textContent = ld.unlock ? `Neu: ${ld.unlock}!` : '';
+    document.getElementById('level-up-fact').textContent = ld.fact || '';
+    $levelUpScreen.classList.remove('hidden');
+
+    // Confetti
+    for (let i = 0; i < 30; i++) {
+      particles.push({
+        x: Math.random() * gW,
+        y: -10,
+        vx: (Math.random() - 0.5) * 3,
+        vy: Math.random() * 2 + 0.5,
+        life: 1.5,
+        color: ['#fdd835', '#e91e8c', '#4caf50', '#fff', '#ff9800'][Math.floor(Math.random() * 5)],
+        size: Math.random() * 5 + 2,
+      });
+    }
+  }
+
+  function updateLevelUp(dt) {
+    levelUpTimer -= dt;
+    updateParticles(dt);
+    meerkat.bobPhase += dt * 3;
+    if (levelUpTimer <= 0) {
+      $levelUpScreen.classList.add('hidden');
+      gameState = STATE.PLAYING;
+      updateHUD();
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // GAME OVER
+  // ══════════════════════════════════════════
+
+  function endGame() {
+    gameState = STATE.GAME_OVER;
+    meerkat.state = 'miss';
+
+    const isNewHigh = score > saveData.highScore;
+    if (isNewHigh) saveData.highScore = score;
+    saveData.gamesPlayed++;
+    writeSave();
+
+    $finalScore.textContent = score;
+    if (isNewHigh && score > 0) $highscoreBadge.classList.remove('hidden');
+    else $highscoreBadge.classList.add('hidden');
+
+    // Product quip
+    let quip = PRODUCT_QUIPS[0].text;
+    for (const q of PRODUCT_QUIPS) {
+      if (score >= q.min) quip = q.text;
+    }
+    $productQuip.textContent = quip;
+
+    $gameOverScreen.classList.remove('hidden');
+  }
+
+  // ══════════════════════════════════════════
+  // RENDERING
+  // ══════════════════════════════════════════
+
+  function render() {
+    ctx.save();
+
+    // Screen shake
+    if (screenShake.timer > 0) {
+      ctx.translate(screenShake.x, screenShake.y);
+    }
+
+    // Background
+    const grad = ctx.createLinearGradient(0, 0, 0, gH);
+    grad.addColorStop(0, bgColors[0]);
+    grad.addColorStop(1, bgColors[1]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(-10, -10, gW + 20, gH + 20);
+
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y < gH; y += 50) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(gW, y); ctx.stroke();
+    }
+
+    // 1 life warning vignette
+    if (lives === 1 && gameState === STATE.PLAYING) {
+      const vgrad = ctx.createRadialGradient(gW / 2, gH / 2, gW * 0.3, gW / 2, gH / 2, gW * 0.8);
+      vgrad.addColorStop(0, 'transparent');
+      vgrad.addColorStop(1, 'rgba(229, 57, 53, 0.15)');
+      ctx.fillStyle = vgrad;
+      ctx.fillRect(0, 0, gW, gH);
+    }
+
+    // Draw items
+    for (const it of fallingItems) {
+      if (it.y + it.size > 0) drawItem(it);
+    }
+
+    // Draw hand
+    drawHand(hand.x, hand.y, hand.w, hand.h);
+
+    // Draw meerkat
+    if (meerkat.mode === 'menu') {
+      // Menu: meerkat sits on the hand (start pose)
+      const mkH = hand.w * 0.9;
+      const mkX = hand.x + hand.w / 2;
+      const mkY = hand.y + 4;
+      drawMeerkat(mkX, mkY, mkH, 'start', meerkat.bobPhase);
+    } else {
+      // Gameplay: meerkat in bottom-left corner as commentator
+      const mkH = gH * 0.22;
+      const mkX = 8 + mkH * 0.3;
+      const mkY = gH - 8;
+      drawMeerkat(mkX, mkY, mkH, meerkat.state, meerkat.bobPhase);
+    }
+
+    // Particles & popups
+    drawParticles();
+
+    ctx.restore();
+  }
+
+  // ══════════════════════════════════════════
+  // MAIN LOOP
+  // ══════════════════════════════════════════
+
+  function loop(timestamp) {
+    const rawDt = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+    const dt = Math.min(rawDt, 0.1); // Clamp to avoid jumps after tab switch
+
+    if (gameState === STATE.PLAYING) {
+      updateGame(dt);
+    } else if (gameState === STATE.LEVEL_UP) {
+      updateLevelUp(dt);
+    }
+
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    initAudio();
+    $startScreen.classList.add('hidden');
+    $gameOverScreen.classList.add('hidden');
+    $levelUpScreen.classList.add('hidden');
+    initGame();
+    gameState = STATE.PLAYING;
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  // Auto-pause on tab switch
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && gameState === STATE.PLAYING) {
+      keys.left = false;
+      keys.right = false;
+    } else if (!document.hidden) {
+      lastTime = performance.now();
+    }
+  });
+
+  // ══════════════════════════════════════════
+  // CONTROLS
+  // ══════════════════════════════════════════
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') { e.preventDefault(); keys.left = true; }
+    if (e.key === 'ArrowRight' || e.key === 'd') { e.preventDefault(); keys.right = true; }
+    if (e.key === ' ' || e.key === 'Enter') {
+      if (gameState === STATE.MENU || gameState === STATE.GAME_OVER) startGame();
+      if (gameState === STATE.LEVEL_UP) { levelUpTimer = 0; }
+    }
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+  });
+
+  // Mobile touch controls
+  function addTouchHold(el, key) {
+    const start = e => { e.preventDefault(); keys[key] = true; };
+    const end = e => { e.preventDefault(); keys[key] = false; };
+    el.addEventListener('touchstart', start, { passive: false });
+    el.addEventListener('touchend', end, { passive: false });
+    el.addEventListener('touchcancel', () => { keys[key] = false; });
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', () => { keys[key] = false; });
+  }
+
+  addTouchHold(document.getElementById('btn-left'), 'left');
+  addTouchHold(document.getElementById('btn-right'), 'right');
+
+  // Level up screen: tap to skip
+  $levelUpScreen.addEventListener('click', () => {
+    if (gameState === STATE.LEVEL_UP) levelUpTimer = 0;
+  });
+
+  // Start / Restart
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('restart-btn').addEventListener('click', startGame);
+
+  // Share
+  $shareBtn.addEventListener('click', () => {
+    const text = `Ich hab ${score} Snacks bei HAND AUF Snack Catcher gefangen! Schaffst du mehr?`;
+    const url = location.origin + location.pathname + `?challenge=${score}`;
+
+    if (navigator.share) {
+      navigator.share({ title: 'HAND AUF Snack Catcher', text, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text + '\n' + url).then(() => {
+        $shareBtn.textContent = 'Link kopiert!';
+        setTimeout(() => { $shareBtn.textContent = 'Score teilen'; }, 2000);
+      }).catch(() => {});
+    }
+  });
+
+  // ── Initial idle render ──
+  initGame();
+  meerkat.mode = 'menu'; // Override: on start screen, meerkat sits on hand
+  lastTime = performance.now();
+  function idleLoop(ts) {
+    if (gameState !== STATE.MENU) return;
+    const dt = Math.min((ts - lastTime) / 1000, 0.1);
+    lastTime = ts;
+    meerkat.bobPhase += dt * 2;
+    render();
+    requestAnimationFrame(idleLoop);
+  }
+  requestAnimationFrame(idleLoop);
+
+})();
+</script>
+
+</body>
+</html>
