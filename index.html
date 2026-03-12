@@ -133,6 +133,40 @@
       min-height: 1.2em;
     }
 
+    /* ── ENERGY BAR ── */
+    #energy-wrap {
+      margin-top: 6px;
+      height: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px;
+      position: relative;
+      overflow: hidden;
+    }
+    #energy-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #fdd835, #ff9800);
+      border-radius: 5px;
+      transition: width 0.3s;
+    }
+    #energy-wrap.active #energy-bar {
+      background: linear-gradient(90deg, #ffd700, #ff6f00);
+      animation: pulse-energy 0.5s ease-in-out infinite alternate;
+    }
+    #energy-label {
+      position: absolute;
+      right: 6px;
+      top: -1px;
+      font-size: 0.55em;
+      font-weight: bold;
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    @keyframes pulse-energy {
+      from { box-shadow: 0 0 6px #ffd700; }
+      to { box-shadow: 0 0 14px #ff6f00; }
+    }
+
     /* Progress bar */
     #progress-wrap {
       position: absolute;
@@ -151,8 +185,63 @@
       border-radius: 0 0 12px 12px;
     }
 
-    /* ── MOBILE CONTROLS (hidden – replaced by direct touch) ── */
-    #mobile-controls { display: none; }
+    /* ── SOUND TOGGLE ── */
+    #sound-toggle {
+      position: absolute;
+      top: 46px;
+      right: 10px;
+      z-index: 6;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 0.9em;
+      cursor: pointer;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    #sound-toggle:hover { opacity: 1; }
+
+    /* ── MOBILE CONTROLS ── */
+    #mobile-controls {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 0; right: 0;
+      z-index: 5;
+      justify-content: space-between;
+      padding: 0 14px;
+      pointer-events: none;
+    }
+
+    .arrow-btn {
+      pointer-events: auto;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.7);
+      font-size: 2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .arrow-btn:active { background: rgba(255,255,255,0.25); }
+
+    @media (pointer: coarse) {
+      #mobile-controls { display: flex; }
+    }
 
     /* ── GAME OVER ── */
     #final-score { font-size: 3.5em; font-weight: bold; }
@@ -169,6 +258,34 @@
       opacity: 0.7;
       font-style: italic;
       max-width: 260px;
+    }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 2px 12px;
+      font-size: 0.78em;
+      opacity: 0.85;
+      text-align: left;
+    }
+    .stats-grid .stat-label { opacity: 0.6; }
+    .stats-grid .stat-value { text-align: right; font-weight: bold; }
+
+    /* ── DAILY CHALLENGE ── */
+    .daily-badge {
+      background: rgba(253, 216, 53, 0.15);
+      border: 1px solid rgba(253, 216, 53, 0.4);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.8em;
+      color: #fdd835;
+      max-width: 280px;
+    }
+    .daily-badge.completed {
+      background: rgba(76, 175, 80, 0.2);
+      border-color: rgba(76, 175, 80, 0.5);
+      color: #81c784;
     }
 
     /* ── LEVEL UP ── */
@@ -196,6 +313,28 @@
     .controls-hint { font-size: 0.8em; opacity: 0.5; }
 
     .gap-sm { height: 6px; }
+
+    /* ── TUTORIAL ── */
+    #tutorial-overlay {
+      background: rgba(0, 66, 61, 0.85);
+      z-index: 20;
+      gap: 20px;
+    }
+    .tutorial-arrows {
+      font-size: 2.2em;
+      animation: tutorial-sway 1.2s ease-in-out infinite;
+    }
+    @keyframes tutorial-sway {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-15px); }
+      75% { transform: translateX(15px); }
+    }
+
+    /* ── PAUSE ── */
+    #pause-overlay {
+      z-index: 15;
+      background: rgba(0, 66, 61, 0.88);
+    }
   </style>
 </head>
 <body>
@@ -213,9 +352,16 @@
         <div id="combo-display"></div>
       </div>
     </div>
+    <div id="energy-wrap">
+      <div id="energy-bar"></div>
+      <span id="energy-label"></span>
+    </div>
   </div>
 
   <div id="progress-wrap"><div id="progress-bar"></div></div>
+
+  <!-- Sound Toggle -->
+  <button id="sound-toggle">🔊</button>
 
   <!-- Mobile Controls -->
   <div id="mobile-controls">
@@ -228,10 +374,24 @@
     <h1>HAND AUF</h1>
     <p class="subtitle">Hilf dem Erdmännchen, die Snacks aufzufangen!</p>
     <div id="challenge-banner" class="hidden"></div>
+    <div id="daily-challenge-display" class="daily-badge hidden"></div>
     <button class="btn" id="start-btn">Snacken!</button>
-    <p class="controls-hint">← → Pfeiltasten oder Finger</p>
+    <p class="controls-hint">← → Pfeiltasten oder Touch</p>
     <div class="gap-sm"></div>
     <div id="start-highscore" style="font-size:0.85em; opacity:0.6;"></div>
+  </div>
+
+  <!-- Tutorial Overlay -->
+  <div class="overlay hidden" id="tutorial-overlay">
+    <div class="tutorial-arrows">◀ 🖐 ▶</div>
+    <p class="subtitle" style="font-size:1.2em;">Bewege die Hand und fang die Snacks!</p>
+    <p class="controls-hint">Tippe zum Starten</p>
+  </div>
+
+  <!-- Pause Overlay -->
+  <div class="overlay hidden" id="pause-overlay">
+    <h2>Pause</h2>
+    <button class="btn" id="resume-btn">Weiter</button>
   </div>
 
   <!-- Level Up Screen -->
@@ -248,6 +408,8 @@
     <div id="final-score">0</div>
     <p class="subtitle">Snacks gefangen</p>
     <div id="highscore-badge" class="hidden">Neuer Rekord!</div>
+    <div id="game-stats" class="stats-grid"></div>
+    <div id="daily-result" class="daily-badge hidden"></div>
     <p class="product-quip" id="product-quip"></p>
     <button class="btn" id="restart-btn">Nochmal!</button>
     <button class="btn btn-secondary" id="share-btn">Score teilen</button>
@@ -313,14 +475,14 @@
   ];
 
   const SNACK_DEFS = [
-    { name: 'Edamame',     img: 'snacks/edamame.png',     color: '#7cb342', points: 1 },
-    { name: 'Mais',        img: 'snacks/mais.png',        color: '#fdd835', points: 1 },
-    { name: 'Brezel',      img: 'snacks/brezel.png',      color: '#c8a25c', points: 1 },
-    { name: 'Mandel',      img: 'snacks/mandel.png',      color: '#a1723a', points: 1 },
-    { name: 'Kürbiskern',  img: 'snacks/kuerbiskern.png', color: '#e8a735', points: 2 },
-    { name: 'Pistazie',    img: 'snacks/pistazie.png',    color: '#8bc34a', points: 2 },
-    { name: 'Käse',        img: 'snacks/kaese.png',       color: '#ffca28', points: 2 },
-    { name: 'Rindfleisch', img: 'snacks/rindfleisch.png', color: '#7a3b2e', points: 2 },
+    { name: 'Edamame',     img: 'snacks/edamame.png',     color: '#7cb342', points: 1, behavior: 'pair' },
+    { name: 'Mais',        img: 'snacks/mais.png',        color: '#fdd835', points: 1, behavior: 'normal' },
+    { name: 'Brezel',      img: 'snacks/brezel.png',      color: '#c8a25c', points: 1, behavior: 'sway' },
+    { name: 'Mandel',      img: 'snacks/mandel.png',      color: '#a1723a', points: 1, behavior: 'normal' },
+    { name: 'Kürbiskern',  img: 'snacks/kuerbiskern.png', color: '#e8a735', points: 2, behavior: 'fast' },
+    { name: 'Pistazie',    img: 'snacks/pistazie.png',    color: '#8bc34a', points: 2, behavior: 'sway' },
+    { name: 'Käse',        img: 'snacks/kaese.png',       color: '#ffca28', points: 2, behavior: 'normal' },
+    { name: 'Rindfleisch', img: 'snacks/rindfleisch.png', color: '#7a3b2e', points: 2, behavior: 'heavy' },
   ];
 
   const BOMB_DEF = { name: 'Chili', emoji: '🌶️', color: '#e53935', points: -1 };
@@ -341,6 +503,15 @@
     { min: 60,  text: 'Eine ganze Packung Bergsteigermampf verdient!' },
     { min: 100, text: 'HAND AUF Vorrat für eine Woche gesichert!' },
   ];
+
+  // Musical scale for ascending combo tones (C4 to D5)
+  const COMBO_NOTES = [262, 294, 330, 349, 392, 440, 494, 523, 587, 659];
+
+  // Speech bubble phrases
+  const CATCH_PHRASES = ['Lecker!', 'Yummy!', 'Nom!', 'Mmh!', 'Top!', 'Ja!'];
+  const MISS_PHRASES  = ['Nein!', 'Oh nein!', 'Schade!', 'Uff!'];
+  const COMBO_PHRASES = ['Combo!', 'Mega!', 'Super!', 'Krass!', 'Wahnsinn!'];
+  const MAGNET_PHRASES = ['MAGNET!', 'Power!', 'Stark!'];
 
   // ══════════════════════════════════════════
   // CANVAS SETUP
@@ -367,7 +538,7 @@
   // ══════════════════════════════════════════
 
   let audioCtx = null;
-  let soundOn = true;
+  let soundOn = localStorage.getItem('handauf_sound') !== 'off';
 
   function initAudio() {
     if (audioCtx) return;
@@ -390,15 +561,13 @@
     } catch (e) {}
   }
 
-  function sfxCatch(combo) {
-    playTone(500 + combo * 60, 0.12, 'sine', 0.12);
+  function sfxCatch(comboCount) {
+    const noteIdx = Math.min(comboCount - 1, COMBO_NOTES.length - 1);
+    const freq = COMBO_NOTES[Math.max(0, noteIdx)];
+    playTone(freq, 0.15, 'sine', 0.14);
   }
-  function sfxMiss() {
-    playTone(180, 0.2, 'triangle', 0.1);
-  }
-  function sfxBomb() {
-    playTone(100, 0.3, 'sawtooth', 0.08);
-  }
+  function sfxMiss() { playTone(180, 0.2, 'triangle', 0.1); }
+  function sfxBomb() { playTone(100, 0.3, 'sawtooth', 0.08); }
   function sfxLevelUp() {
     playTone(523, 0.15); setTimeout(() => playTone(659, 0.15), 120);
     setTimeout(() => playTone(784, 0.25, 'sine', 0.18), 240);
@@ -406,6 +575,19 @@
   function sfxGold() {
     playTone(800, 0.1); setTimeout(() => playTone(1000, 0.1), 80);
     setTimeout(() => playTone(1200, 0.2), 160);
+  }
+  function sfxMagnet() {
+    playTone(400, 0.1); setTimeout(() => playTone(600, 0.1), 70);
+    setTimeout(() => playTone(800, 0.1), 140);
+    setTimeout(() => playTone(1000, 0.15), 210);
+  }
+
+  // ══════════════════════════════════════════
+  // VIBRATION
+  // ══════════════════════════════════════════
+
+  function vibrate(pattern) {
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
   }
 
   // ══════════════════════════════════════════
@@ -434,6 +616,47 @@
   } catch (e) {}
 
   // ══════════════════════════════════════════
+  // DAILY CHALLENGE
+  // ══════════════════════════════════════════
+
+  function getDailyChallenge() {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = 'handauf_daily';
+    try {
+      const stored = JSON.parse(localStorage.getItem(key));
+      if (stored && stored.date === today) return stored;
+    } catch(e) {}
+
+    const parts = today.split('-');
+    const seed = parseInt(parts[0]) * 366 + parseInt(parts[1]) * 31 + parseInt(parts[2]);
+    const types = ['catch', 'combo', 'score'];
+    const type = types[seed % 3];
+    const challenge = { date: today, type, completed: false, progress: 0 };
+
+    if (type === 'catch') {
+      const snackIdx = seed % SNACK_DEFS.length;
+      challenge.snackIdx = snackIdx;
+      challenge.target = 15 + (seed % 20);
+      challenge.text = `Tages-Challenge: Fang ${challenge.target}x ${SNACK_DEFS[snackIdx].name}!`;
+    } else if (type === 'combo') {
+      challenge.target = 4 + (seed % 4);
+      challenge.text = `Tages-Challenge: Erreiche eine ${challenge.target}x Combo!`;
+    } else {
+      challenge.target = 40 + (seed % 60);
+      challenge.text = `Tages-Challenge: Erreiche ${challenge.target} Punkte!`;
+    }
+
+    try { localStorage.setItem(key, JSON.stringify(challenge)); } catch(e) {}
+    return challenge;
+  }
+
+  function saveDailyChallenge(ch) {
+    try { localStorage.setItem('handauf_daily', JSON.stringify(ch)); } catch(e) {}
+  }
+
+  let dailyChallenge = getDailyChallenge();
+
+  // ══════════════════════════════════════════
   // DOM REFS
   // ══════════════════════════════════════════
 
@@ -442,15 +665,24 @@
   const $levelDisplay = document.getElementById('level-display');
   const $comboDisplay = document.getElementById('combo-display');
   const $progressBar = document.getElementById('progress-bar');
+  const $energyWrap = document.getElementById('energy-wrap');
+  const $energyBar = document.getElementById('energy-bar');
+  const $energyLabel = document.getElementById('energy-label');
   const $startScreen = document.getElementById('start-screen');
   const $startHighscore = document.getElementById('start-highscore');
   const $challengeBanner = document.getElementById('challenge-banner');
+  const $dailyDisplay = document.getElementById('daily-challenge-display');
   const $levelUpScreen = document.getElementById('level-up-screen');
   const $gameOverScreen = document.getElementById('game-over-screen');
   const $finalScore = document.getElementById('final-score');
   const $highscoreBadge = document.getElementById('highscore-badge');
+  const $gameStats = document.getElementById('game-stats');
+  const $dailyResult = document.getElementById('daily-result');
   const $productQuip = document.getElementById('product-quip');
   const $shareBtn = document.getElementById('share-btn');
+  const $soundToggle = document.getElementById('sound-toggle');
+  const $tutorialOverlay = document.getElementById('tutorial-overlay');
+  const $pauseOverlay = document.getElementById('pause-overlay');
 
   // Show highscore on start
   if (saveData.highScore > 0) {
@@ -461,6 +693,24 @@
     $challengeBanner.classList.remove('hidden');
   }
 
+  // Show daily challenge on start
+  if (dailyChallenge && !dailyChallenge.completed) {
+    $dailyDisplay.textContent = dailyChallenge.text;
+    $dailyDisplay.classList.remove('hidden');
+  } else if (dailyChallenge && dailyChallenge.completed) {
+    $dailyDisplay.textContent = dailyChallenge.text + ' ✓';
+    $dailyDisplay.classList.remove('hidden');
+    $dailyDisplay.classList.add('completed');
+  }
+
+  // Sound toggle
+  $soundToggle.textContent = soundOn ? '🔊' : '🔇';
+  $soundToggle.addEventListener('click', () => {
+    soundOn = !soundOn;
+    $soundToggle.textContent = soundOn ? '🔊' : '🔇';
+    try { localStorage.setItem('handauf_sound', soundOn ? 'on' : 'off'); } catch(e) {}
+  });
+
   // ══════════════════════════════════════════
   // GAME STATE
   // ══════════════════════════════════════════
@@ -468,9 +718,13 @@
   const STATE = { MENU: 0, PLAYING: 1, LEVEL_UP: 2, GAME_OVER: 3 };
   let gameState = STATE.MENU;
   let lastTime = 0;
+  let paused = false;
+  let showingTutorial = false;
+  let tutorialTimer = 0;
 
   let hand = { x: 0, y: 0, w: 0, h: 0, speed: 0 };
   let meerkat = { state: 'idle', timer: 0, bobPhase: 0, mode: 'menu' };
+  let speechBubble = { text: '', timer: 0 };
   let fallingItems = [];
   let particles = [];
   let scorePopups = [];
@@ -485,16 +739,20 @@
   let spawnAccum = 0;
   let bgColors = ['#005a52', '#00423d'];
   let keys = { left: false, right: false };
+  let energy = { current: 0, max: 100, active: false, timer: 0 };
+  let consecutiveMisses = 0;
+  let stats = { caughtByType: {}, longestCombo: 0, totalCaught: 0, totalMissed: 0 };
 
   function getLevelDef() { return LEVELS[Math.min(currentLevel, LEVELS.length - 1)]; }
 
   function initGame() {
     hand.w = gW * 0.35;
-    hand.h = hand.w * (344 / 1301); // match hand.png aspect ratio
+    hand.h = hand.w * (344 / 1301);
     hand.x = gW / 2 - hand.w / 2;
     hand.y = gH - hand.h - 30;
-    hand.speed = gW * 0.5; // px per second
+    hand.speed = gW * 0.5;
     meerkat = { state: 'idle', timer: 0, bobPhase: 0, mode: 'game' };
+    speechBubble = { text: '', timer: 0 };
     fallingItems = [];
     particles = [];
     scorePopups = [];
@@ -507,7 +765,20 @@
     screenShake = { x: 0, y: 0, timer: 0 };
     spawnAccum = 0;
     bgColors = LEVELS[0].bg;
+    energy = { current: 0, max: 100, active: false, timer: 0 };
+    consecutiveMisses = 0;
+    stats = { caughtByType: {}, longestCombo: 0, totalCaught: 0, totalMissed: 0 };
+    dailyChallenge = getDailyChallenge();
     updateHUD();
+  }
+
+  function showSpeech(text) {
+    speechBubble.text = text;
+    speechBubble.timer = 1.2;
+  }
+
+  function randomFrom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
   }
 
   function updateHUD() {
@@ -516,7 +787,6 @@
     const ld = getLevelDef();
     $levelDisplay.textContent = `Level ${ld.level} – ${ld.name}`;
 
-    // Combo
     if (combo.count >= 2) {
       $comboDisplay.textContent = `x${combo.count} Combo!`;
       $comboDisplay.style.fontSize = `${Math.min(0.85 + combo.count * 0.08, 1.5)}em`;
@@ -531,10 +801,20 @@
     if (nextNeeded > prevNeeded) {
       const pct = Math.min(100, ((totalSnacksCaught - prevNeeded) / (nextNeeded - prevNeeded)) * 100);
       $progressBar.style.width = pct + '%';
-      if (pct > 80) $progressBar.style.background = '#ffab00';
-      else $progressBar.style.background = '#fdd835';
+      $progressBar.style.background = pct > 80 ? '#ffab00' : '#fdd835';
     } else {
       $progressBar.style.width = '100%';
+    }
+
+    // Energy bar
+    const ePct = Math.min(100, (energy.current / energy.max) * 100);
+    $energyBar.style.width = ePct + '%';
+    if (energy.active) {
+      $energyWrap.classList.add('active');
+      $energyLabel.textContent = `MAGNET ${Math.ceil(energy.timer)}s`;
+    } else {
+      $energyWrap.classList.remove('active');
+      $energyLabel.textContent = ePct >= 100 ? '⚡' : '';
     }
   }
 
@@ -544,7 +824,6 @@
 
   const mkImages = {};
   let mkImagesLoaded = 0;
-  const MK_TOTAL = 4;
   const mkSrc = {
     idle: 'meerkat-idle.png',
     catch: 'meerkat-happy.png',
@@ -562,33 +841,83 @@
   function drawMeerkat(cx, baseY, height, state, bobPhase) {
     const img = mkImages[state] || mkImages.idle;
     if (!img || !img.naturalWidth) return;
-
     ctx.save();
-
-    // Bob animation
     const bob = Math.sin(bobPhase) * 2;
     const aspect = img.naturalWidth / img.naturalHeight;
     const h = height;
     const w = h * aspect;
-
     ctx.drawImage(img, cx - w / 2, baseY - h + bob, w, h);
     ctx.restore();
   }
 
   // ══════════════════════════════════════════
-  // DRAWING: HAND (image-based)
+  // SPEECH BUBBLE (canvas-drawn)
+  // ══════════════════════════════════════════
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function drawSpeechBubble(text, bx, by) {
+    ctx.save();
+    const alpha = Math.min(1, speechBubble.timer * 2);
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 13px Arial Black';
+    const tw = ctx.measureText(text).width + 18;
+    const th = 26;
+    let rx = bx - tw / 2;
+    const ry = by - th;
+    rx = Math.max(4, Math.min(gW - tw - 4, rx));
+
+    ctx.fillStyle = '#fff';
+    roundRect(ctx, rx, ry, tw, th, 8);
+    ctx.fill();
+
+    // Triangle pointer
+    ctx.beginPath();
+    ctx.moveTo(bx - 5, ry + th);
+    ctx.lineTo(bx + 5, ry + th);
+    ctx.lineTo(bx, ry + th + 7);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#00423d';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, rx + tw / 2, ry + th / 2);
+    ctx.restore();
+  }
+
+  // ══════════════════════════════════════════
+  // DRAWING: HAND (image-based, with optional glow)
   // ══════════════════════════════════════════
 
   const handImg = new Image();
   handImg.src = 'hand.png';
 
-  function drawHand(x, y, w, h) {
+  function drawHand(x, y, w, h, glow) {
     if (!handImg.naturalWidth) return;
+    ctx.save();
+    if (glow) {
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 25;
+    }
     ctx.drawImage(handImg, x, y, w, h);
+    ctx.restore();
   }
 
   // ══════════════════════════════════════════
-  // DRAWING: SNACKS
+  // DRAWING: SNACKS (with squash & stretch)
   // ══════════════════════════════════════════
 
   function drawItem(item) {
@@ -596,7 +925,12 @@
     ctx.translate(item.x + item.size / 2, item.y + item.size / 2);
     ctx.rotate(item.rot);
 
-    // Glow for gold/bomb
+    // Squash & stretch based on speed
+    const speedFactor = Math.min(item.speed / 3, 1);
+    const sx = 1 - speedFactor * 0.08;
+    const sy = 1 + speedFactor * 0.08;
+    ctx.scale(sx, sy);
+
     if (item.isGold) {
       ctx.shadowColor = '#ffd700';
       ctx.shadowBlur = 12;
@@ -605,7 +939,6 @@
       ctx.shadowBlur = 8;
     }
 
-    // Background circle only for special items (bomb/gold)
     if (item.isGold || item.isBomb) {
       ctx.fillStyle = item.def.color;
       ctx.globalAlpha = item.isGold ? 0.4 : 0.35;
@@ -616,13 +949,11 @@
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
 
-    // Draw snack image or emoji fallback
     const snackImg = item.def.img ? snackImages[item.def.img] : null;
     if (snackImg && snackImg.naturalWidth) {
       const s = item.size;
       ctx.drawImage(snackImg, -s / 2, -s / 2, s, s);
     } else {
-      // Fallback for bomb/gold (still emoji)
       ctx.font = `${item.size}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -691,50 +1022,91 @@
   }
 
   // ══════════════════════════════════════════
-  // SPAWNING
+  // SPAWNING (with snack-specific behaviors)
   // ══════════════════════════════════════════
+
+  function createItem(def, isGold, isBomb, x) {
+    const ld = getLevelDef();
+    let size = 40 + Math.random() * 10;
+    let speedMult = 1;
+
+    if (def.behavior === 'fast') speedMult = 1.3;
+    if (def.behavior === 'heavy') { speedMult = 1.2; size += 6; }
+
+    if (x === undefined) {
+      let attempts = 0;
+      do {
+        x = Math.random() * (gW - size - 20) + 10;
+        attempts++;
+      } while (attempts < 8 && fallingItems.some(
+        it => Math.abs(it.x - x) < 40 && it.y < 60
+      ));
+    }
+
+    return {
+      x, y: -size - 10,
+      size,
+      speed: (ld.fallSpeed + Math.random() * 0.6) * speedMult,
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.03,
+      def, isGold, isBomb,
+      grace: 0,
+      behavior: def.behavior || 'normal',
+      swayPhase: Math.random() * Math.PI * 2,
+    };
+  }
 
   function spawnItem() {
     const ld = getLevelDef();
     if (fallingItems.length >= ld.maxActive) return;
 
-    const size = 40 + Math.random() * 10;
     let def, isGold = false, isBomb = false;
 
-    // 5% chance gold snack from level 3+
     if (currentLevel >= 2 && Math.random() < 0.05) {
       def = GOLD_DEF;
       isGold = true;
-    }
-    // 8% chance bomb from levels with hasBomb
-    else if (ld.hasBomb && Math.random() < 0.08) {
+    } else if (ld.hasBomb && Math.random() < 0.08) {
       def = BOMB_DEF;
       isBomb = true;
-    }
-    // Normal snack from available types
-    else {
+    } else {
       const typeIdx = ld.snackTypes[Math.floor(Math.random() * ld.snackTypes.length)];
       def = SNACK_DEFS[typeIdx];
     }
 
-    // Avoid spawning too close to existing items near top
-    let x, attempts = 0;
-    do {
-      x = Math.random() * (gW - size - 20) + 10;
-      attempts++;
-    } while (attempts < 8 && fallingItems.some(
-      it => Math.abs(it.x - x) < 40 && it.y < 60
-    ));
+    const item = createItem(def, isGold, isBomb);
+    fallingItems.push(item);
 
-    fallingItems.push({
-      x, y: -size - 10,
-      size,
-      speed: ld.fallSpeed + Math.random() * 0.6,
-      rot: Math.random() * Math.PI * 2,
-      rotSpeed: (Math.random() - 0.5) * 0.03,
-      def, isGold, isBomb,
-      grace: 0,
-    });
+    // Pair behavior: spawn a second one nearby
+    if (def.behavior === 'pair' && fallingItems.length < ld.maxActive) {
+      const x2 = item.x + 30 + Math.random() * 20;
+      if (x2 < gW - 50) {
+        const item2 = createItem(def, false, false, x2);
+        item2.y = -item2.size - 25 - Math.random() * 15;
+        fallingItems.push(item2);
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // DAILY CHALLENGE TRACKING
+  // ══════════════════════════════════════════
+
+  function updateDailyProgress(snackDef, comboCount) {
+    if (!dailyChallenge || dailyChallenge.completed) return;
+
+    if (dailyChallenge.type === 'catch' && snackDef && snackDef.name === SNACK_DEFS[dailyChallenge.snackIdx]?.name) {
+      dailyChallenge.progress++;
+    } else if (dailyChallenge.type === 'combo' && comboCount >= dailyChallenge.target) {
+      dailyChallenge.progress = dailyChallenge.target;
+    } else if (dailyChallenge.type === 'score' && score >= dailyChallenge.target) {
+      dailyChallenge.progress = dailyChallenge.target;
+    }
+
+    if (dailyChallenge.progress >= dailyChallenge.target && !dailyChallenge.completed) {
+      dailyChallenge.completed = true;
+      showSpeech('Challenge!');
+      saveDailyChallenge(dailyChallenge);
+    }
   }
 
   // ══════════════════════════════════════════
@@ -743,37 +1115,58 @@
 
   function updateGame(dt) {
     const ld = getLevelDef();
+    const diffFactor = consecutiveMisses >= 2 ? 0.85 : 1;
 
-    // ── Move hand ──
-    if (touchX !== null) {
-      hand.x = touchX - hand.w / 2;
-    } else {
-      if (keys.left) hand.x -= hand.speed * dt;
-      if (keys.right) hand.x += hand.speed * dt;
-    }
+    // Move hand
+    if (keys.left) hand.x -= hand.speed * dt;
+    if (keys.right) hand.x += hand.speed * dt;
     hand.x = Math.max(0, Math.min(gW - hand.w, hand.x));
 
-    // ── Meerkat state timer ──
+    // Meerkat state timer
     if (meerkat.timer > 0) {
       meerkat.timer -= dt;
       if (meerkat.timer <= 0) meerkat.state = 'idle';
     }
     meerkat.bobPhase += dt * 3;
 
-    // ── Spawning ──
+    // Speech bubble timer
+    if (speechBubble.timer > 0) speechBubble.timer -= dt;
+
+    // Energy / Magnet
+    if (energy.active) {
+      energy.timer -= dt;
+      if (energy.timer <= 0) {
+        energy.active = false;
+        energy.current = 0;
+      }
+      if (Math.random() < 0.4) {
+        particles.push({
+          x: hand.x + Math.random() * hand.w,
+          y: hand.y + hand.h * 0.3,
+          vx: (Math.random() - 0.5) * 2,
+          vy: Math.random() + 0.5,
+          life: 0.4,
+          color: '#ffd700',
+          size: Math.random() * 3 + 1,
+        });
+      }
+      updateHUD();
+    }
+
+    // Spawning
     spawnAccum += dt * 60;
     if (spawnAccum >= ld.spawnInterval) {
       spawnItem();
       spawnAccum = 0;
     }
 
-    // ── Combo timer ──
+    // Combo timer
     if (combo.timer > 0) {
       combo.timer -= dt;
       if (combo.timer <= 0) { combo.count = 0; updateHUD(); }
     }
 
-    // ── Screen shake ──
+    // Screen shake
     if (screenShake.timer > 0) {
       screenShake.timer -= dt;
       screenShake.x = (Math.random() - 0.5) * 6;
@@ -781,20 +1174,32 @@
       if (screenShake.timer <= 0) { screenShake.x = 0; screenShake.y = 0; }
     }
 
-    // ── Update items ──
+    // Update items
     const handCX = hand.x + hand.w / 2;
     const handTop = hand.y;
-    const catchW = hand.w * 0.65; // catch zone width (generous)
+    const catchW = hand.w * 0.65;
 
     for (let i = fallingItems.length - 1; i >= 0; i--) {
       const it = fallingItems[i];
-      it.y += it.speed * dt * 60;
+      it.y += it.speed * diffFactor * dt * 60;
       it.rot += it.rotSpeed;
+
+      // Sway behavior
+      if (it.behavior === 'sway') {
+        it.x += Math.sin(it.y * 0.04 + it.swayPhase) * 1.2;
+        it.x = Math.max(0, Math.min(gW - it.size, it.x));
+      }
+
+      // Magnet effect
+      if (energy.active && !it.isBomb) {
+        const dx = handCX - (it.x + it.size / 2);
+        it.x += dx * 0.035 * dt * 60;
+      }
 
       const ix = it.x + it.size / 2;
       const iy = it.y + it.size / 2;
 
-      // Catch check (generous hitbox)
+      // Catch check
       if (
         ix > handCX - catchW &&
         ix < handCX + catchW &&
@@ -804,31 +1209,64 @@
         fallingItems.splice(i, 1);
 
         if (it.isBomb) {
-          // Caught a bomb!
           lives--;
           combo.count = 0;
           combo.timer = 0;
+          consecutiveMisses++;
           meerkat.state = 'miss';
           meerkat.timer = 0.6;
           screenShake.timer = 0.25;
           spawnParticles(ix, iy, '#e53935', 12);
           spawnScorePopup(ix, iy - 10, '💥', '#e53935');
           sfxBomb();
+          vibrate([50, 30, 50]);
+          showSpeech(randomFrom(MISS_PHRASES));
           updateHUD();
           if (lives <= 0) { endGame(); return; }
         } else {
-          // Caught a snack!
           const pts = it.def.points;
           combo.count++;
           combo.timer = 1.5;
+          consecutiveMisses = 0;
           const multiplier = Math.min(1 + (combo.count - 1) * 0.3, 4);
           const earnedPts = Math.round(pts * multiplier);
           score += earnedPts;
           totalSnacksCaught++;
           snacksCaughtInLevel++;
 
+          // Stats
+          stats.totalCaught++;
+          const sName = it.def.name;
+          stats.caughtByType[sName] = (stats.caughtByType[sName] || 0) + 1;
+          stats.longestCombo = Math.max(stats.longestCombo, combo.count);
+
           meerkat.state = 'catch';
           meerkat.timer = 0.35;
+
+          // Energy gain
+          if (it.isGold) {
+            energy.current = energy.max;
+          } else if (!energy.active) {
+            energy.current = Math.min(energy.max, energy.current + 5 + combo.count * 3);
+          }
+
+          // Activate magnet
+          if (energy.current >= energy.max && !energy.active) {
+            energy.active = true;
+            energy.timer = 15;
+            sfxMagnet();
+            vibrate([30, 20, 30, 20, 60]);
+            showSpeech(randomFrom(MAGNET_PHRASES));
+          }
+
+          // Speech bubbles
+          if (!energy.active || speechBubble.timer <= 0) {
+            if (combo.count >= 3 && combo.count % 2 === 1) {
+              showSpeech(randomFrom(COMBO_PHRASES));
+            } else if (Math.random() < 0.25) {
+              showSpeech(randomFrom(CATCH_PHRASES));
+            }
+          }
 
           const popText = earnedPts > 1 ? `+${earnedPts}` : '+1';
           const popColor = it.isGold ? '#ffd700' : '#fff';
@@ -838,23 +1276,29 @@
           if (it.isGold) sfxGold();
           else sfxCatch(combo.count);
 
+          vibrate(30);
+          updateDailyProgress(it.def, combo.count);
           updateHUD();
           checkLevelUp();
         }
         continue;
       }
 
-      // Missed (with grace period)
+      // Missed
       if (it.y > gH + 5) {
         it.grace += dt;
         if (it.grace > 0.1) {
           fallingItems.splice(i, 1);
-          if (!it.isBomb) { // Missing a bomb is fine!
+          if (!it.isBomb && !it.isGold) {
             lives--;
+            consecutiveMisses++;
+            stats.totalMissed++;
             meerkat.state = 'miss';
             meerkat.timer = 0.5;
             screenShake.timer = 0.15;
             sfxMiss();
+            vibrate([50, 30, 50]);
+            if (speechBubble.timer <= 0) showSpeech(randomFrom(MISS_PHRASES));
             updateHUD();
             if (lives <= 0) { endGame(); return; }
           }
@@ -862,11 +1306,16 @@
       }
     }
 
+    // Daily challenge: score check
+    if (dailyChallenge && dailyChallenge.type === 'score' && !dailyChallenge.completed) {
+      updateDailyProgress(null, 0);
+    }
+
     updateParticles(dt);
   }
 
   // ══════════════════════════════════════════
-  // LEVEL UP CHECK
+  // LEVEL UP
   // ══════════════════════════════════════════
 
   function checkLevelUp() {
@@ -885,14 +1334,12 @@
   function showLevelUp(ld) {
     gameState = STATE.LEVEL_UP;
     levelUpTimer = 2.5;
-
     document.getElementById('level-up-title').textContent = `Level ${ld.level}`;
     document.getElementById('level-up-name').textContent = ld.name;
     document.getElementById('level-up-unlock').textContent = ld.unlock ? `Neu: ${ld.unlock}!` : '';
     document.getElementById('level-up-fact').textContent = ld.fact || '';
     $levelUpScreen.classList.remove('hidden');
 
-    // Confetti
     for (let i = 0; i < 30; i++) {
       particles.push({
         x: Math.random() * gW,
@@ -918,7 +1365,7 @@
   }
 
   // ══════════════════════════════════════════
-  // GAME OVER
+  // GAME OVER (with stats + daily result)
   // ══════════════════════════════════════════
 
   function endGame() {
@@ -934,7 +1381,35 @@
     if (isNewHigh && score > 0) $highscoreBadge.classList.remove('hidden');
     else $highscoreBadge.classList.add('hidden');
 
-    // Product quip
+    // Stats display
+    let topSnack = { name: '-', count: 0 };
+    for (const [name, count] of Object.entries(stats.caughtByType)) {
+      if (count > topSnack.count) topSnack = { name, count };
+    }
+    const totalAttempts = stats.totalCaught + stats.totalMissed;
+    const accuracy = totalAttempts > 0 ? Math.round(stats.totalCaught / totalAttempts * 100) : 0;
+
+    $gameStats.innerHTML = `
+      <span class="stat-label">Lieblingssnack</span><span class="stat-value">${topSnack.name} (${topSnack.count}x)</span>
+      <span class="stat-label">Längste Combo</span><span class="stat-value">${stats.longestCombo}x</span>
+      <span class="stat-label">Genauigkeit</span><span class="stat-value">${accuracy}%</span>
+    `;
+
+    // Daily challenge result
+    if (dailyChallenge) {
+      if (dailyChallenge.completed) {
+        $dailyResult.textContent = dailyChallenge.text.replace('Tages-Challenge: ', '') + ' ✓ Geschafft!';
+        $dailyResult.classList.remove('hidden');
+        $dailyResult.classList.add('completed');
+      } else {
+        const prog = dailyChallenge.type === 'catch' ? dailyChallenge.progress :
+                     dailyChallenge.type === 'score' ? score : stats.longestCombo;
+        $dailyResult.textContent = `${dailyChallenge.text.replace('Tages-Challenge: ', '')} (${prog}/${dailyChallenge.target})`;
+        $dailyResult.classList.remove('hidden', 'completed');
+      }
+      saveDailyChallenge(dailyChallenge);
+    }
+
     let quip = PRODUCT_QUIPS[0].text;
     for (const q of PRODUCT_QUIPS) {
       if (score >= q.min) quip = q.text;
@@ -951,7 +1426,6 @@
   function render() {
     ctx.save();
 
-    // Screen shake
     if (screenShake.timer > 0) {
       ctx.translate(screenShake.x, screenShake.y);
     }
@@ -962,6 +1436,12 @@
     grad.addColorStop(1, bgColors[1]);
     ctx.fillStyle = grad;
     ctx.fillRect(-10, -10, gW + 20, gH + 20);
+
+    // Power mode: golden tint
+    if (energy.active) {
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.04)';
+      ctx.fillRect(0, 0, gW, gH);
+    }
 
     // Subtle grid
     ctx.strokeStyle = 'rgba(255,255,255,0.025)';
@@ -985,26 +1465,31 @@
     }
 
     // Draw hand
-    drawHand(hand.x, hand.y, hand.w, hand.h);
+    drawHand(hand.x, hand.y, hand.w, hand.h, energy.active);
 
-    // Draw meerkat
+    // Draw meerkat + speech bubble
+    let mkBubbleX, mkBubbleY;
     if (meerkat.mode === 'menu') {
-      // Menu: meerkat sits on the hand (start pose)
       const mkH = hand.w * 0.9;
       const mkX = hand.x + hand.w / 2;
       const mkY = hand.y + 4;
       drawMeerkat(mkX, mkY, mkH, 'start', meerkat.bobPhase);
+      mkBubbleX = mkX;
+      mkBubbleY = mkY - mkH + 4;
     } else {
-      // Gameplay: meerkat in bottom-left corner as commentator
       const mkH = gH * 0.22;
       const mkX = 8 + mkH * 0.3;
       const mkY = gH - 8;
       drawMeerkat(mkX, mkY, mkH, meerkat.state, meerkat.bobPhase);
+      mkBubbleX = mkX;
+      mkBubbleY = mkY - mkH - 4;
     }
 
-    // Particles & popups
-    drawParticles();
+    if (speechBubble.timer > 0 && meerkat.mode !== 'menu') {
+      drawSpeechBubble(speechBubble.text, mkBubbleX, mkBubbleY);
+    }
 
+    drawParticles();
     ctx.restore();
   }
 
@@ -1013,9 +1498,28 @@
   // ══════════════════════════════════════════
 
   function loop(timestamp) {
+    if (paused) {
+      lastTime = timestamp;
+      render();
+      requestAnimationFrame(loop);
+      return;
+    }
+
     const rawDt = (timestamp - lastTime) / 1000;
     lastTime = timestamp;
-    const dt = Math.min(rawDt, 0.1); // Clamp to avoid jumps after tab switch
+    const dt = Math.min(rawDt, 0.1);
+
+    if (showingTutorial) {
+      tutorialTimer -= dt;
+      meerkat.bobPhase += dt * 2;
+      if (tutorialTimer <= 0) {
+        showingTutorial = false;
+        $tutorialOverlay.classList.add('hidden');
+      }
+      render();
+      requestAnimationFrame(loop);
+      return;
+    }
 
     if (gameState === STATE.PLAYING) {
       updateGame(dt);
@@ -1032,20 +1536,40 @@
     $startScreen.classList.add('hidden');
     $gameOverScreen.classList.add('hidden');
     $levelUpScreen.classList.add('hidden');
+    $pauseOverlay.classList.add('hidden');
+    $dailyResult.classList.add('hidden');
+    paused = false;
     initGame();
     gameState = STATE.PLAYING;
     lastTime = performance.now();
+
+    // Tutorial on first play
+    if (saveData.gamesPlayed === 0 && !showingTutorial) {
+      showingTutorial = true;
+      tutorialTimer = 3;
+      $tutorialOverlay.classList.remove('hidden');
+    }
+
     requestAnimationFrame(loop);
   }
 
-  // Auto-pause on tab switch
+  // Pause on tab switch
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && gameState === STATE.PLAYING) {
+    if (document.hidden && gameState === STATE.PLAYING && !paused) {
+      paused = true;
       keys.left = false;
       keys.right = false;
-    } else if (!document.hidden) {
+      $pauseOverlay.classList.remove('hidden');
+    } else if (!document.hidden && paused) {
       lastTime = performance.now();
     }
+  });
+
+  // Resume
+  document.getElementById('resume-btn').addEventListener('click', () => {
+    paused = false;
+    lastTime = performance.now();
+    $pauseOverlay.classList.add('hidden');
   });
 
   // ══════════════════════════════════════════
@@ -1058,6 +1582,17 @@
     if (e.key === ' ' || e.key === 'Enter') {
       if (gameState === STATE.MENU || gameState === STATE.GAME_OVER) startGame();
       if (gameState === STATE.LEVEL_UP) { levelUpTimer = 0; }
+      if (paused) {
+        paused = false;
+        lastTime = performance.now();
+        $pauseOverlay.classList.add('hidden');
+      }
+    }
+    if (e.key === 'Escape' && gameState === STATE.PLAYING && !paused) {
+      paused = true;
+      keys.left = false;
+      keys.right = false;
+      $pauseOverlay.classList.remove('hidden');
     }
   });
 
@@ -1066,39 +1601,35 @@
     if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
   });
 
-  // Direct touch control – hand follows finger X position
-  let touchX = null;
+  function addTouchHold(el, key) {
+    const start = e => { e.preventDefault(); keys[key] = true; };
+    const end = e => { e.preventDefault(); keys[key] = false; };
+    el.addEventListener('touchstart', start, { passive: false });
+    el.addEventListener('touchend', end, { passive: false });
+    el.addEventListener('touchcancel', () => { keys[key] = false; });
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', () => { keys[key] = false; });
+  }
 
-  canvas.addEventListener('touchstart', e => {
-    if (gameState === STATE.PLAYING) {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      touchX = e.touches[0].clientX - rect.left;
-    }
-  }, { passive: false });
+  addTouchHold(document.getElementById('btn-left'), 'left');
+  addTouchHold(document.getElementById('btn-right'), 'right');
 
-  canvas.addEventListener('touchmove', e => {
-    if (gameState === STATE.PLAYING) {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      touchX = e.touches[0].clientX - rect.left;
-    }
-  }, { passive: false });
-
-  canvas.addEventListener('touchend', e => {
-    touchX = null;
-  }, { passive: false });
-
-  // Level up screen: tap to skip
   $levelUpScreen.addEventListener('click', () => {
     if (gameState === STATE.LEVEL_UP) levelUpTimer = 0;
   });
 
-  // Start / Restart
+  $tutorialOverlay.addEventListener('click', () => {
+    if (showingTutorial) {
+      showingTutorial = false;
+      tutorialTimer = 0;
+      $tutorialOverlay.classList.add('hidden');
+    }
+  });
+
   document.getElementById('start-btn').addEventListener('click', startGame);
   document.getElementById('restart-btn').addEventListener('click', startGame);
 
-  // Share
   $shareBtn.addEventListener('click', () => {
     const text = `Ich hab ${score} Snacks bei HAND AUF Snack Catcher gefangen! Schaffst du mehr?`;
     const url = location.origin + location.pathname + `?challenge=${score}`;
@@ -1115,7 +1646,7 @@
 
   // ── Initial idle render ──
   initGame();
-  meerkat.mode = 'menu'; // Override: on start screen, meerkat sits on hand
+  meerkat.mode = 'menu';
   lastTime = performance.now();
   function idleLoop(ts) {
     if (gameState !== STATE.MENU) return;
