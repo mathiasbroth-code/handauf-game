@@ -151,39 +151,8 @@
       border-radius: 0 0 12px 12px;
     }
 
-    /* ── MOBILE CONTROLS ── */
-    #mobile-controls {
-      display: none;
-      position: absolute;
-      bottom: 12px;
-      left: 0; right: 0;
-      z-index: 5;
-      justify-content: space-between;
-      padding: 0 14px;
-      pointer-events: none;
-    }
-
-    .arrow-btn {
-      pointer-events: auto;
-      width: 84px;
-      height: 84px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.12);
-      border: 2px solid rgba(255,255,255,0.25);
-      color: rgba(255,255,255,0.7);
-      font-size: 2em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .arrow-btn:active { background: rgba(255,255,255,0.25); }
-
-    @media (pointer: coarse) {
-      #mobile-controls { display: flex; }
-    }
+    /* ── MOBILE CONTROLS (hidden – replaced by direct touch) ── */
+    #mobile-controls { display: none; }
 
     /* ── GAME OVER ── */
     #final-score { font-size: 3.5em; font-weight: bold; }
@@ -260,7 +229,7 @@
     <p class="subtitle">Hilf dem Erdmännchen, die Snacks aufzufangen!</p>
     <div id="challenge-banner" class="hidden"></div>
     <button class="btn" id="start-btn">Snacken!</button>
-    <p class="controls-hint">← → Pfeiltasten oder Touch</p>
+    <p class="controls-hint">← → Pfeiltasten oder Finger</p>
     <div class="gap-sm"></div>
     <div id="start-highscore" style="font-size:0.85em; opacity:0.6;"></div>
   </div>
@@ -776,8 +745,12 @@
     const ld = getLevelDef();
 
     // ── Move hand ──
-    if (keys.left) hand.x -= hand.speed * dt;
-    if (keys.right) hand.x += hand.speed * dt;
+    if (touchX !== null) {
+      hand.x = touchX - hand.w / 2;
+    } else {
+      if (keys.left) hand.x -= hand.speed * dt;
+      if (keys.right) hand.x += hand.speed * dt;
+    }
     hand.x = Math.max(0, Math.min(gW - hand.w, hand.x));
 
     // ── Meerkat state timer ──
@@ -1093,20 +1066,28 @@
     if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
   });
 
-  // Mobile touch controls
-  function addTouchHold(el, key) {
-    const start = e => { e.preventDefault(); keys[key] = true; };
-    const end = e => { e.preventDefault(); keys[key] = false; };
-    el.addEventListener('touchstart', start, { passive: false });
-    el.addEventListener('touchend', end, { passive: false });
-    el.addEventListener('touchcancel', () => { keys[key] = false; });
-    el.addEventListener('mousedown', start);
-    el.addEventListener('mouseup', end);
-    el.addEventListener('mouseleave', () => { keys[key] = false; });
-  }
+  // Direct touch control – hand follows finger X position
+  let touchX = null;
 
-  addTouchHold(document.getElementById('btn-left'), 'left');
-  addTouchHold(document.getElementById('btn-right'), 'right');
+  canvas.addEventListener('touchstart', e => {
+    if (gameState === STATE.PLAYING) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      touchX = e.touches[0].clientX - rect.left;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    if (gameState === STATE.PLAYING) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      touchX = e.touches[0].clientX - rect.left;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', e => {
+    touchX = null;
+  }, { passive: false });
 
   // Level up screen: tap to skip
   $levelUpScreen.addEventListener('click', () => {
