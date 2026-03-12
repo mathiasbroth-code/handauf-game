@@ -209,39 +209,8 @@
     }
     #sound-toggle:hover { opacity: 1; }
 
-    /* ── MOBILE CONTROLS ── */
-    #mobile-controls {
-      display: none;
-      position: absolute;
-      bottom: 12px;
-      left: 0; right: 0;
-      z-index: 5;
-      justify-content: space-between;
-      padding: 0 14px;
-      pointer-events: none;
-    }
-
-    .arrow-btn {
-      pointer-events: auto;
-      width: 84px;
-      height: 84px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.12);
-      border: 2px solid rgba(255,255,255,0.25);
-      color: rgba(255,255,255,0.7);
-      font-size: 2em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .arrow-btn:active { background: rgba(255,255,255,0.25); }
-
-    @media (pointer: coarse) {
-      #mobile-controls { display: flex; }
-    }
+    /* ── MOBILE CONTROLS (hidden – replaced by direct touch) ── */
+    #mobile-controls { display: none; }
 
     /* ── GAME OVER ── */
     #final-score { font-size: 3.5em; font-weight: bold; }
@@ -376,7 +345,7 @@
     <div id="challenge-banner" class="hidden"></div>
     <div id="daily-challenge-display" class="daily-badge hidden"></div>
     <button class="btn" id="start-btn">Snacken!</button>
-    <p class="controls-hint">← → Pfeiltasten oder Touch</p>
+    <p class="controls-hint">← → Pfeiltasten oder Finger</p>
     <div class="gap-sm"></div>
     <div id="start-highscore" style="font-size:0.85em; opacity:0.6;"></div>
   </div>
@@ -488,9 +457,18 @@
   const BOMB_DEF = { name: 'Chili', emoji: '🌶️', color: '#e53935', points: -1 };
   const GOLD_DEF = { name: 'Gold-Snack', emoji: '⭐', color: '#ffd700', points: 5 };
 
-  // Preload snack images
+  // Bad snacks (junk food) – catch = lose a life
+  const BAD_SNACK_DEFS = [
+    { name: 'Burger',       img: 'snacks/burger.png',       emoji: '🍔', color: '#d4a017' },
+    { name: 'Pommes',       img: 'snacks/pommes.png',       emoji: '🍟', color: '#e8c524' },
+    { name: 'Pizza',        img: 'snacks/pizza.png',        emoji: '🍕', color: '#e07020' },
+    { name: 'Donut',        img: 'snacks/donut.png',        emoji: '🍩', color: '#d4678c' },
+    { name: 'Schokoriegel', img: 'snacks/schokoriegel.png', emoji: '🍫', color: '#5d3a1a' },
+  ];
+
+  // Preload snack images (good + bad)
   const snackImages = {};
-  for (const def of SNACK_DEFS) {
+  for (const def of [...SNACK_DEFS, ...BAD_SNACK_DEFS]) {
     const img = new Image();
     img.src = def.img;
     snackImages[def.img] = img;
@@ -937,10 +915,13 @@
     } else if (item.isBomb) {
       ctx.shadowColor = '#e53935';
       ctx.shadowBlur = 8;
+    } else if (item.isBadSnack) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur = 6;
     }
 
-    if (item.isGold || item.isBomb) {
-      ctx.fillStyle = item.def.color;
+    if (item.isGold || item.isBomb || item.isBadSnack) {
+      ctx.fillStyle = item.isBadSnack ? 'rgba(255,100,0,0.25)' : item.def.color;
       ctx.globalAlpha = item.isGold ? 0.4 : 0.35;
       ctx.beginPath();
       ctx.arc(0, 0, item.size / 2 + 3, 0, Math.PI * 2);
@@ -1025,7 +1006,7 @@
   // SPAWNING (with snack-specific behaviors)
   // ══════════════════════════════════════════
 
-  function createItem(def, isGold, isBomb, x) {
+  function createItem(def, isGold, isBomb, x, isBadSnack) {
     const ld = getLevelDef();
     let size = 40 + Math.random() * 10;
     let speedMult = 1;
@@ -1049,7 +1030,7 @@
       speed: (ld.fallSpeed + Math.random() * 0.6) * speedMult,
       rot: Math.random() * Math.PI * 2,
       rotSpeed: (Math.random() - 0.5) * 0.03,
-      def, isGold, isBomb,
+      def, isGold, isBomb, isBadSnack: isBadSnack || false,
       grace: 0,
       behavior: def.behavior || 'normal',
       swayPhase: Math.random() * Math.PI * 2,
@@ -1060,7 +1041,7 @@
     const ld = getLevelDef();
     if (fallingItems.length >= ld.maxActive) return;
 
-    let def, isGold = false, isBomb = false;
+    let def, isGold = false, isBomb = false, isBadSnack = false;
 
     if (currentLevel >= 2 && Math.random() < 0.05) {
       def = GOLD_DEF;
@@ -1068,12 +1049,15 @@
     } else if (ld.hasBomb && Math.random() < 0.08) {
       def = BOMB_DEF;
       isBomb = true;
+    } else if (currentLevel >= 1 && Math.random() < 0.10) {
+      def = BAD_SNACK_DEFS[Math.floor(Math.random() * BAD_SNACK_DEFS.length)];
+      isBadSnack = true;
     } else {
       const typeIdx = ld.snackTypes[Math.floor(Math.random() * ld.snackTypes.length)];
       def = SNACK_DEFS[typeIdx];
     }
 
-    const item = createItem(def, isGold, isBomb);
+    const item = createItem(def, isGold, isBomb, undefined, isBadSnack);
     fallingItems.push(item);
 
     // Pair behavior: spawn a second one nearby
@@ -1118,8 +1102,12 @@
     const diffFactor = consecutiveMisses >= 2 ? 0.85 : 1;
 
     // Move hand
-    if (keys.left) hand.x -= hand.speed * dt;
-    if (keys.right) hand.x += hand.speed * dt;
+    if (touchX !== null) {
+      hand.x = touchX - hand.w / 2;
+    } else {
+      if (keys.left) hand.x -= hand.speed * dt;
+      if (keys.right) hand.x += hand.speed * dt;
+    }
     hand.x = Math.max(0, Math.min(gW - hand.w, hand.x));
 
     // Meerkat state timer
@@ -1191,7 +1179,7 @@
       }
 
       // Magnet effect
-      if (energy.active && !it.isBomb) {
+      if (energy.active && !it.isBomb && !it.isBadSnack) {
         const dx = handCX - (it.x + it.size / 2);
         it.x += dx * 0.035 * dt * 60;
       }
@@ -1208,7 +1196,7 @@
       ) {
         fallingItems.splice(i, 1);
 
-        if (it.isBomb) {
+        if (it.isBomb || it.isBadSnack) {
           lives--;
           combo.count = 0;
           combo.timer = 0;
@@ -1216,11 +1204,12 @@
           meerkat.state = 'miss';
           meerkat.timer = 0.6;
           screenShake.timer = 0.25;
-          spawnParticles(ix, iy, '#e53935', 12);
-          spawnScorePopup(ix, iy - 10, '💥', '#e53935');
+          const badColor = it.isBadSnack ? it.def.color : '#e53935';
+          spawnParticles(ix, iy, badColor, 12);
+          spawnScorePopup(ix, iy - 10, it.isBadSnack ? '🤢' : '💥', badColor);
           sfxBomb();
           vibrate([50, 30, 50]);
-          showSpeech(randomFrom(MISS_PHRASES));
+          showSpeech(it.isBadSnack ? 'Junk Food! Bäh!' : randomFrom(MISS_PHRASES));
           updateHUD();
           if (lives <= 0) { endGame(); return; }
         } else {
@@ -1253,7 +1242,7 @@
           // Activate magnet
           if (energy.current >= energy.max && !energy.active) {
             energy.active = true;
-            energy.timer = 15;
+            energy.timer = 8;
             sfxMagnet();
             vibrate([30, 20, 30, 20, 60]);
             showSpeech(randomFrom(MAGNET_PHRASES));
@@ -1289,7 +1278,7 @@
         it.grace += dt;
         if (it.grace > 0.1) {
           fallingItems.splice(i, 1);
-          if (!it.isBomb && !it.isGold) {
+          if (!it.isBomb && !it.isGold && !it.isBadSnack) {
             lives--;
             consecutiveMisses++;
             stats.totalMissed++;
@@ -1601,19 +1590,28 @@
     if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
   });
 
-  function addTouchHold(el, key) {
-    const start = e => { e.preventDefault(); keys[key] = true; };
-    const end = e => { e.preventDefault(); keys[key] = false; };
-    el.addEventListener('touchstart', start, { passive: false });
-    el.addEventListener('touchend', end, { passive: false });
-    el.addEventListener('touchcancel', () => { keys[key] = false; });
-    el.addEventListener('mousedown', start);
-    el.addEventListener('mouseup', end);
-    el.addEventListener('mouseleave', () => { keys[key] = false; });
-  }
+  // Direct touch control – hand follows finger X position
+  let touchX = null;
 
-  addTouchHold(document.getElementById('btn-left'), 'left');
-  addTouchHold(document.getElementById('btn-right'), 'right');
+  canvas.addEventListener('touchstart', e => {
+    if (gameState === STATE.PLAYING) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      touchX = e.touches[0].clientX - rect.left;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    if (gameState === STATE.PLAYING) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      touchX = e.touches[0].clientX - rect.left;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', e => {
+    touchX = null;
+  }, { passive: false });
 
   $levelUpScreen.addEventListener('click', () => {
     if (gameState === STATE.LEVEL_UP) levelUpTimer = 0;
